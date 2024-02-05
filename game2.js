@@ -1,85 +1,142 @@
-// game.js
+const cartas = require('./json/array.json');
 
 class BlackjackGame {
     constructor() {
         this.partidas = {};
     }
 
-    // Inicializar una nueva partida de Blackjack
     iniciarJoc(codiPartida, jugador) {
         this.partidas[codiPartida] = {
             jugadores: [jugador],
             cartas: [],
+            crupier: {
+                cartas: []
+            }
         };
     }
 
-    // Verificar si la partida existe y tiene la propiedad 'cartas'
-    pedirCarta(codiPartida) {
+    pedirCarta(codiPartida, jugador) {
         if (!this.partidas[codiPartida]) {
             this.iniciarJoc(codiPartida);
         } else if (!this.partidas[codiPartida].cartas) {
             this.partidas[codiPartida].cartas = [];
         }
-
-        // Generar una carta y agregarla a las cartas de la partida
-        const nuevaCarta = this.generarCarta();
-        this.partidas[codiPartida].cartas.push(nuevaCarta);
-
-        return nuevaCarta;
-    }
-
-    // Comprobar si el juego existe y tiene la propiedad 'cartas'
-    plantarse(codiPartida, jugador) {
-        if (!this.partidas[codiPartida] || !this.partidas[codiPartida].cartas) {
-            return 'Partida no encontrada. Por favor, inicia una nueva partida.';
-        }
-
-        // Comprobar si el jugador existe en el juego
-        if (!this.partidas[codiPartida].jugadores.includes(jugador)) {
-            return 'Jugador no encontrado en la partida.';
-        }
-
-        // Calcular el total de puntos de las cartas del jugador
-        const puntosJugador = this.calcularPuntos(this.partidas[codiPartida].cartas, jugador);
-
-        // Simular la acción de que un jugador se planta
-        // Puedes implementar la lógica aquí para determinar el resultado del juego según los puntos
-        // Por simplicidad, simplemente devolvemos un mensaje indicando que el jugador se ha plantado
-        return `${jugador} se ha plantado con ${puntosJugador} puntos. Fin del turno.`;
-    }
-
-    // Función auxiliar para calcular el total de puntos de las cartas de un jugador
-    calcularPuntos(cartas, jugador) {
-        // Implementa tu lógica para calcular el total de puntos del jugador
-        // Por simplicidad, asumimos que cada carta tiene un valor igual a su rango (ignorando las cartas con figuras por ahora)
-        const puntos = cartas.reduce((acumulador, carta) => {
-            // Extraer el valor numérico de la carta y sumarlo al total
-            const valorCarta = parseInt(carta.valor);
-            return `${jugador} te has plantado con ${acumulador + valorCarta}puntos `;
-        }, 0);
-
-        return puntos;
-    }
-
-    // Función auxiliar para generar una carta (puedes personalizarla según tus necesidades)
-    generarCarta() {
-        const cartas = {
-            '🂡': 11, '🂢': 2, '🂣': 3, '🂤': 4, '🂥': 5, '🂦': 6, '🂧': 7, '🂨': 8, '🂩': 9, '🂪': 10,
-            '🂫': 10, '🂭': 10, '🂮': 10, '🂱': 11, '🂲': 2, '🂳': 3, '🂴': 4, '🂵': 5, '🂶': 6, '🂷': 7,
-            '🂸': 8, '🂹': 9, '🂺': 10, '🂻': 10, '🂼': 10, '🂽': 10, '🂱': 11, '🂲': 2, '🂳': 3, '🂴': 4, '🂵': 5, '🂶': 6, '🂷': 7,
-            '🂸': 8, '🂹': 9, '🂺': 10, '🂻': 10, '🂼': 10, '🂽': 10, '🂱': 11, '🂲': 2, '🂳': 3, '🂴': 4, '🂵': 5, '🂶': 6, '🂷': 7,
-            '🂸': 8, '🂹': 9, '🂺': 10, '🂻': 10, '🂼': 10, '🂽': 10,
-        };
     
-        const clavesCartas = Object.keys(cartas);
-        const cartaAleatoria = clavesCartas[Math.floor(Math.random() * clavesCartas.length)];
+        if (!this.partidas[codiPartida].jugador) {
+            this.partidas[codiPartida].jugador = {};
+        }
+    
+        if (!this.partidas[codiPartida].jugador[jugador]) {
+            this.partidas[codiPartida].jugador[jugador] = { cartas: [] };
+        }
+    
+        const nuevasCartasJugador = this.generarCarta();
+        const nuevasCartasCrupier = this.generarCarta();
+    
+        this.partidas[codiPartida].cartas.push(...nuevasCartasJugador, ...nuevasCartasCrupier);
+        this.partidas[codiPartida].jugador[jugador].cartas.push(...nuevasCartasJugador);
+        this.partidas[codiPartida].crupier.cartas.push(...nuevasCartasCrupier);
+    
+        console.log('Cartas del Jugador:', nuevasCartasJugador);
+        console.log('Cartas del Crupier:', nuevasCartasCrupier);
+
+        return {
+            jugador: nuevasCartasJugador,
+            crupier: nuevasCartasCrupier
+        };
+    }
+    
+
+    plantarse(codiPartida, jugador) {
+        const partida = this.partidas[codiPartida];
+    
+        if (!partida || !partida.jugador || !partida.jugador[jugador] || !partida.crupier || !partida.crupier.cartas) {
+            return { resultado: "Error: Datos de la partida incompletos." };
+        }
+    
+        const cartasJugador = partida.jugador[jugador].cartas;
+        const cartasCrupier = partida.crupier.cartas;
+    
+        if (!cartasJugador || !cartasCrupier) {
+            return { resultado: "Error: Datos de las cartas incompletos." };
+        }
+    
+        const puntosJugador = this.calcularPuntos(cartasJugador);
+        const puntosCrupier = this.calcularPuntos(cartasCrupier);
+    
+        let resultado = '';
+    
+        if (puntosJugador.jugador.puntos > puntosCrupier.crupier.puntos) {
+            resultado = `${jugador} ha ganado con ${puntosJugador.jugador.puntos}. Felicidades!`;
+        } else if (puntosJugador.jugador.puntos < puntosCrupier.crupier.puntos) {
+            resultado = `${jugador} ha perdido con ${puntosJugador.jugador.puntos}. El crupier tiene ${puntosCrupier.crupier.puntos}.`;
+        } else {
+            resultado = 'Empate. No hay ganador.';
+        }
+    
+        return { resultado: resultado };
+    }
+
+    calcularPuntos(cartas, jugador, crupier) {
+        let puntos = 0;
+        let tieneAs = false;
+    
+        if (!jugador) {
+            jugador = { puntos: 0 };
+        }
+    
+        if (!crupier) {
+            crupier = { puntos: 0 };
+        }
+    
+        cartas.forEach(carta => {
+            const valorCarta = carta.valor;
+    
+            if (valorCarta === 'rey' || valorCarta === 'reina' || valorCarta === 'jota') {
+                puntos += 10;
+            } else if (valorCarta === 'as') {
+                puntos += 11;
+                tieneAs = true;
+            } else {
+                puntos += valorCarta;
+            }
+        });
+    
+        while (tieneAs && puntos > 21) {
+            puntos -= 10;
+            tieneAs = false;
+        }
+    
+        jugador.puntos = puntos;
+        crupier.puntos = puntos;
     
         return {
-            carta: cartaAleatoria,
-            valor: cartas[cartaAleatoria],
+            jugador: {
+                puntos: jugador.puntos,
+            },
+            crupier: {
+                puntos: crupier.puntos,
+            }
         };
     }
-    
-}
+
+    generarCarta(){    
+        const clavesCartas = cartas.cartas;
+        const cartaAleatoria1 = clavesCartas[Math.floor(Math.random() * clavesCartas.length)];
+        const cartaAleatoria2 = clavesCartas[Math.floor(Math.random() * clavesCartas.length)];
+
+        const nuevaCarta1 = {
+            carta: cartaAleatoria1.carta,
+            valor: cartaAleatoria1.valor,
+        };
+
+        const nuevaCarta2 = {
+            carta: cartaAleatoria2.carta,
+            valor: cartaAleatoria2.valor,
+        };
+
+        return [nuevaCarta1, nuevaCarta2];
+    }
+};
 
 module.exports = BlackjackGame;
